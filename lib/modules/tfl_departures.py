@@ -292,7 +292,7 @@ class TfLDeparturesModule(BaseModule):
 
         # Render departures
         current_y = y + panel_header_height + padding
-        line_height = self.departure_font_size + 14  # More spacing for badges
+        line_height = self.departure_font_size + 30  # More spacing for bigger fonts and borders
 
         for departure in departures:
             if current_y + line_height > y + height - padding:
@@ -301,10 +301,11 @@ class TfLDeparturesModule(BaseModule):
             self._render_departure_row(
                 draw=draw,
                 departure=departure,
-                x=x + padding,
+                x=x,
                 y=current_y,
-                width=width - (2 * padding),
-                line_height=line_height
+                width=width,
+                line_height=line_height,
+                padding=padding
             )
 
             current_y += line_height
@@ -316,7 +317,8 @@ class TfLDeparturesModule(BaseModule):
         x: int,
         y: int,
         width: int,
-        line_height: int
+        line_height: int,
+        padding: int
     ) -> None:
         """
         Render a single departure row with line badge and destination.
@@ -328,7 +330,16 @@ class TfLDeparturesModule(BaseModule):
             y: Row y position
             width: Row width
             line_height: Height allocated for this row
+            padding: Padding for content inside the row
         """
+        # Draw border around the entire row
+        draw.rectangle(
+            [(x, y), (x + width, y + line_height)],
+            outline=0,
+            fill=None,
+            width=2
+        )
+
         line_name = departure.get('line_name', 'Unknown')
         destination = departure.get('destination', 'Unknown')
         minutes = departure.get('minutes_until', 0)
@@ -338,13 +349,16 @@ class TfLDeparturesModule(BaseModule):
         dest_font = Renderer.get_default_font(self.departure_font_size)
         time_font = Renderer.get_bold_font(self.departure_font_size + 2)
 
-        # Draw line badge (black box with white text)
-        badge_width = 50
-        badge_height = 20
+        # Add padding to x coordinate for content
+        content_x = x + padding
+
+        # Draw line badge (black box with white text) - bigger size
+        badge_width = 70
+        badge_height = 28
         badge_y = y + (line_height - badge_height) // 2
 
         draw.rectangle(
-            [(x, badge_y), (x + badge_width, badge_y + badge_height)],
+            [(content_x, badge_y), (content_x + badge_width, badge_y + badge_height)],
             fill=0,
             outline=0
         )
@@ -353,16 +367,16 @@ class TfLDeparturesModule(BaseModule):
         # Center text in badge
         badge_text_bbox = draw.textbbox((0, 0), line_name, font=badge_font)
         badge_text_width = badge_text_bbox[2] - badge_text_bbox[0]
-        badge_text_x = x + (badge_width - badge_text_width) // 2
+        badge_text_x = content_x + (badge_width - badge_text_width) // 2
         badge_text_y = badge_y + (badge_height // 2) - (self.line_badge_font_size // 2)
         draw.text((badge_text_x, badge_text_y), line_name, font=badge_font, fill=255)
 
         # Draw destination next to badge
-        dest_x = x + badge_width + 10
+        dest_x = content_x + badge_width + 15
         dest_y = y + (line_height // 2) - (self.departure_font_size // 2)
 
         # Truncate destination if too long
-        max_dest_width = width - badge_width - 80  # Leave space for time
+        max_dest_width = width - badge_width - 150 - (2 * padding)  # Leave space for time
         while len(destination) > 0:
             dest_bbox = draw.textbbox((0, 0), destination, font=dest_font)
             dest_width = dest_bbox[2] - dest_bbox[0]
@@ -375,14 +389,16 @@ class TfLDeparturesModule(BaseModule):
 
         draw.text((dest_x, dest_y), destination, font=dest_font, fill=0)
 
-        # Format and draw time (right-aligned)
+        # Format and draw time (right-aligned with padding)
         if minutes == 0:
             time_str = "Due"
+        elif minutes == 1:
+            time_str = f"{minutes} min"
         else:
-            time_str = f"{minutes}"
+            time_str = f"{minutes} mins"
 
         time_bbox = draw.textbbox((0, 0), time_str, font=time_font)
         time_width = time_bbox[2] - time_bbox[0]
-        time_x = x + width - time_width
+        time_x = x + width - time_width - padding
         time_y = y + (line_height // 2) - (self.departure_font_size // 2)
         draw.text((time_x, time_y), time_str, font=time_font, fill=0)

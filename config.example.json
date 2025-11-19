@@ -20,11 +20,11 @@
       "stop_id": "490001180E",
       "name": "Limehouse Station (Eastbound)"
     },
-    "max_departures": 8,
-    "header_font_size": 24,
-    "section_header_font_size": 16,
-    "departure_font_size": 13,
-    "line_badge_font_size": 11
+    "max_departures": 5,
+    "header_font_size": 32,
+    "section_header_font_size": 20,
+    "departure_font_size": 18,
+    "line_badge_font_size": 16
   },
   "modules": {
     "clock": {
