@@ -293,10 +293,10 @@ class TfLDeparturesModule(BaseModule):
 
         # Render departures
         current_y = y + panel_header_height
-        line_height = self.departure_font_size + 30  # More spacing for bigger fonts and borders
+        line_height = self.departure_font_size + 28  # Spacing for bigger fonts and borders
 
         for idx, departure in enumerate(departures):
-            if current_y + line_height > y + height - padding:
+            if current_y + line_height > y + height:
                 break  # Don't overflow panel
 
             self._render_departure_row(
