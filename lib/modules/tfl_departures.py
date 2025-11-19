@@ -1,12 +1,12 @@
 """
 TfL Departures module for displaying tube and bus arrivals in 2-panel layout.
 Layout:
-- Header: TfL Roundel + Station Name
+- Header: Station Name + Current DateTime
 - Left Panel: All Underground departures (sorted by time)
 - Right Panel: All Bus departures (sorted by time)
 """
 import logging
-import os
+from datetime import datetime
 from typing import Dict, Any, List
 from PIL import Image, ImageDraw
 from lib.modules.base_module import BaseModule
@@ -47,9 +47,6 @@ class TfLDeparturesModule(BaseModule):
         self.section_header_font_size = config.get('section_header_font_size', 16)
         self.departure_font_size = config.get('departure_font_size', 13)
         self.line_badge_font_size = config.get('line_badge_font_size', 11)
-
-        # TfL logo path
-        self.logo_path = config.get('logo_path', 'assets/tfl_roundel.png')
 
         # Cached departure data - now combined by mode
         self.departures = {
@@ -200,7 +197,7 @@ class TfLDeparturesModule(BaseModule):
         height: int
     ) -> None:
         """
-        Render header with TfL logo and station name.
+        Render header with station name and current datetime.
 
         Args:
             image: PIL Image to paste logo onto
@@ -212,33 +209,25 @@ class TfLDeparturesModule(BaseModule):
         """
         padding = 10
 
-        # Try to load TfL roundel logo
-        logo_size = height - (2 * padding)
-        logo_x = x + padding
-        logo_y = y + padding
+        # Get current datetime
+        now = datetime.now()
+        current_time = now.strftime('%H:%M')
+        current_date = now.strftime('%a %d %b')
 
-        logo_loaded = False
-        if os.path.exists(self.logo_path):
-            try:
-                logo = Image.open(self.logo_path)
-                # Convert RGBA to handle transparency properly
-                if logo.mode == 'P' or logo.mode == 'PA':
-                    logo = logo.convert('RGBA')
-                # Convert to grayscale and then to 1-bit for e-paper
-                logo = logo.convert('L').convert('1')
-                logo.thumbnail((logo_size, logo_size), Image.Resampling.LANCZOS)
-                # Paste logo onto image
-                image.paste(logo, (logo_x, logo_y))
-                logo_loaded = True
-                logger.debug("TfL logo loaded and pasted")
-            except Exception as e:
-                logger.warning(f"Could not load TfL logo: {e}")
-
-        # Draw station name
+        # Get fonts
         header_font = Renderer.get_bold_font(self.header_font_size)
-        text_x = logo_x + logo_size + padding * 2 if logo_loaded else logo_x
+
+        # Draw station name (left-aligned)
+        text_x = x + padding
         text_y = y + (height // 2) - (self.header_font_size // 2)
         draw.text((text_x, text_y), self.station_name, font=header_font, fill=0)
+
+        # Draw datetime (right-aligned)
+        datetime_text = f"{current_time} {current_date}"
+        datetime_bbox = draw.textbbox((0, 0), datetime_text, font=header_font)
+        datetime_width = datetime_bbox[2] - datetime_bbox[0]
+        datetime_x = x + width - datetime_width - padding
+        draw.text((datetime_x, text_y), datetime_text, font=header_font, fill=0)
 
         # Draw horizontal line below header
         draw.line([(x, y + height), (x + width, y + height)], fill=0, width=2)
@@ -276,9 +265,13 @@ class TfLDeparturesModule(BaseModule):
             outline=0
         )
 
-        # Draw white title text on black background
+        # Draw white title text on black background (centered)
         section_font = Renderer.get_bold_font(self.section_header_font_size)
-        title_x = x + padding
+
+        # Calculate text width to center it
+        title_bbox = draw.textbbox((0, 0), title, font=section_font)
+        title_width = title_bbox[2] - title_bbox[0]
+        title_x = x + (width - title_width) // 2
         title_y = y + (panel_header_height // 2) - (self.section_header_font_size // 2)
         draw.text((title_x, title_y), title, font=section_font, fill=255)  # White text
 
