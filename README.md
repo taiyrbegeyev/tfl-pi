@@ -19,9 +19,9 @@ network. Perfect for keeping track of your local tube and bus times at a glance.
 
 ## Features
 
-- Real-time tube departure information
+- Real-time tube departure information (shows all departures including "Due")
 - Real-time bus departure information
-- Smart filtering: Only shows departures 2+ minutes away (gives you realistic time to reach the platform/stop)
+- Smart filtering: Filters out buses arriving in less than 2 minutes (gives you realistic time to reach the bus stop)
 - Automatically fits as many departures as possible on screen
 - Low power consumption thanks to e-paper display
 - Automatic refresh intervals

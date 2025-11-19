@@ -105,8 +105,8 @@ class TfLDeparturesModule(BaseModule):
                 all_bus_departures.extend(departures)
                 logger.debug(f"Eastbound bus: {len(departures)} arrivals")
 
-        # Filter out departures arriving in less than 2 minutes
-        all_tube_departures = [d for d in all_tube_departures if d.get('minutes_until', 0) >= 2]
+        # Filter out buses arriving in less than 2 minutes (not enough time to catch)
+        # Underground/tube shows all departures (easier to catch from platform)
         all_bus_departures = [d for d in all_bus_departures if d.get('minutes_until', 0) >= 2]
 
         # Sort by arrival time (no limit - fit as many as possible)
@@ -137,7 +137,7 @@ class TfLDeparturesModule(BaseModule):
             width, height = self.size
 
             # Layout constants
-            header_height = 60
+            header_height = 50
             panel_header_height = 30
             padding = 10
 
