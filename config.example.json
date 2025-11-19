@@ -1,0 +1,46 @@
+{
+  "tfl_api_key": "YOUR_TFL_API_KEY_HERE",
+  "mock_mode": false,
+  "refresh_interval": 60,
+  "departures": {
+    "westbound_tube": {
+      "stop_id": "940GZZDLLIM",
+      "name": "Limehouse DLR (Westbound)"
+    },
+    "westbound_bus": {
+      "stop_id": "490001180W",
+      "name": "Limehouse Station (Westbound)"
+    },
+    "eastbound_tube": {
+      "stop_id": "940GZZDLLIM",
+      "name": "Limehouse DLR (Eastbound)"
+    },
+    "eastbound_bus": {
+      "stop_id": "490001180E",
+      "name": "Limehouse Station (Eastbound)"
+    },
+    "max_departures": 5,
+    "title_font_size": 18,
+    "departure_font_size": 14
+  },
+  "modules": {
+    "clock": {
+      "enabled": true,
+      "position": [10, 10],
+      "size": [200, 60],
+      "time_format": "%H:%M",
+      "date_format": "%A, %d %B",
+      "show_seconds": false,
+      "font_size": 24
+    },
+    "departures": {
+      "enabled": true,
+      "position": [10, 100],
+      "size": [780, 370]
+    }
+  },
+  "display": {
+    "width": 800,
+    "height": 480
+  }
+}

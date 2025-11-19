@@ -1,0 +1,17 @@
+# Core dependencies
+Pillow>=10.0.0
+requests>=2.31.0
+python-dateutil>=2.8.2
+
+# E-paper display support for Raspberry Pi
+# Following Waveshare guide: https://www.waveshare.com/wiki/7.5inch_e-Paper_HAT_Manual
+# Install these inside a virtual environment (not with sudo pip)
+spidev>=3.6
+RPi.GPIO>=0.7.1
+gpiozero>=2.0.1
+
+# Configuration and utilities
+python-dotenv>=1.0.0
+
+# Note: The Waveshare e-paper driver will be downloaded separately by setup.sh
+# or manually from: https://github.com/waveshare/e-Paper

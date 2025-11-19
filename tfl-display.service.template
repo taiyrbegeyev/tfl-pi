@@ -1,0 +1,21 @@
+[Unit]
+Description=TfL Pi - Transport for London E-Paper Display
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__INSTALL_DIR__
+ExecStart=__INSTALL_DIR__/venv/bin/python __INSTALL_DIR__/main.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# Environment variables
+Environment="PYTHONUNBUFFERED=1"
+Environment="VIRTUAL_ENV=__INSTALL_DIR__/venv"
+
+[Install]
+WantedBy=multi-user.target
