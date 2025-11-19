@@ -8,6 +8,7 @@ python-dateutil>=2.8.2
 # Install these inside a virtual environment (not with sudo pip)
 spidev>=3.6
 RPi.GPIO>=0.7.1
+rpi-lgpio>=0.4
 gpiozero>=2.0.1
 
 # Configuration and utilities
