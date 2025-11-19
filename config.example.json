@@ -3,6 +3,7 @@
   "mock_mode": false,
   "refresh_interval": 60,
   "departures": {
+    "station_name": "Your Station",
     "westbound_tube": {
       "stop_id": "940GZZDLLIM",
       "name": "Limehouse DLR (Westbound)"
@@ -19,9 +20,12 @@
       "stop_id": "490001180E",
       "name": "Limehouse Station (Eastbound)"
     },
-    "max_departures": 5,
-    "title_font_size": 18,
-    "departure_font_size": 14
+    "max_departures": 8,
+    "header_font_size": 24,
+    "section_header_font_size": 16,
+    "departure_font_size": 13,
+    "line_badge_font_size": 11,
+    "logo_path": "assets/tfl_roundel.png"
   },
   "modules": {
     "clock": {

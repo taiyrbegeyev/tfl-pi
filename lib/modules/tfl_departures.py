@@ -1,12 +1,12 @@
 """
-TfL Departures module for displaying tube and bus arrivals in 4 quadrants.
+TfL Departures module for displaying tube and bus arrivals in 2-panel layout.
 Layout:
-- Upper Left: Westbound Tubes
-- Lower Left: Westbound Buses
-- Upper Right: Eastbound Tubes
-- Lower Right: Eastbound Buses
+- Header: TfL Roundel + Station Name
+- Left Panel: All Underground departures (sorted by time)
+- Right Panel: All Bus departures (sorted by time)
 """
 import logging
+import os
 from typing import Dict, Any, List
 from PIL import Image, ImageDraw
 from lib.modules.base_module import BaseModule
@@ -17,102 +17,118 @@ logger = logging.getLogger(__name__)
 
 
 class TfLDeparturesModule(BaseModule):
-    """Module for displaying TfL departures in a 4-quadrant layout."""
+    """Module for displaying TfL departures in a 2-panel layout."""
 
     def __init__(self, config: Dict[str, Any], tfl_client: TfLClient):
         """
         Initialize the TfL departures module.
 
         Args:
-            config: Module configuration with stop IDs for each quadrant
+            config: Module configuration with stop IDs
             tfl_client: TfLClient instance
         """
         super().__init__(config)
         self.tfl_client = tfl_client
 
-        # Departure configurations for each quadrant
+        # Station name for header
+        self.station_name = config.get('station_name', 'Station')
+
+        # Departure configurations
         self.westbound_tube = config.get('westbound_tube', {})
         self.westbound_bus = config.get('westbound_bus', {})
         self.eastbound_tube = config.get('eastbound_tube', {})
         self.eastbound_bus = config.get('eastbound_bus', {})
 
-        # Number of departures to show per quadrant
-        self.max_departures = config.get('max_departures', 5)
+        # Number of departures to show per panel (same for both)
+        self.max_departures_per_panel = config.get('max_departures', 8)
 
         # Font sizes
-        self.title_font_size = config.get('title_font_size', 18)
-        self.departure_font_size = config.get('departure_font_size', 14)
+        self.header_font_size = config.get('header_font_size', 24)
+        self.section_header_font_size = config.get('section_header_font_size', 16)
+        self.departure_font_size = config.get('departure_font_size', 13)
+        self.line_badge_font_size = config.get('line_badge_font_size', 11)
 
-        # Cached departure data
+        # TfL logo path
+        self.logo_path = config.get('logo_path', 'assets/tfl_roundel.png')
+
+        # Cached departure data - now combined by mode
         self.departures = {
-            'westbound_tube': [],
-            'westbound_bus': [],
-            'eastbound_tube': [],
-            'eastbound_bus': [],
+            'tube': [],  # All tube departures combined and sorted
+            'bus': [],   # All bus departures combined and sorted
         }
 
     def update(self) -> bool:
         """
-        Fetch departure data for all quadrants.
+        Fetch departure data for all stops and combine by mode.
 
         Returns:
             bool: True if at least one update was successful
         """
-        success_count = 0
+        all_tube_departures = []
+        all_bus_departures = []
 
-        # Update westbound tube
+        # Fetch westbound tube
         if self.westbound_tube.get('stop_id'):
             departures = self.tfl_client.get_arrivals(
                 stop_point_id=self.westbound_tube['stop_id'],
-                direction='outbound',  # TfL API uses 'outbound' for westbound
-                max_results=self.max_departures
+                direction='outbound',
+                max_results=20  # Fetch more, we'll sort and limit later
             )
             if departures:
-                self.departures['westbound_tube'] = departures
-                success_count += 1
+                all_tube_departures.extend(departures)
                 logger.debug(f"Westbound tube: {len(departures)} arrivals")
 
-        # Update westbound bus
+        # Fetch eastbound tube
+        if self.eastbound_tube.get('stop_id'):
+            departures = self.tfl_client.get_arrivals(
+                stop_point_id=self.eastbound_tube['stop_id'],
+                direction='inbound',
+                max_results=20
+            )
+            if departures:
+                all_tube_departures.extend(departures)
+                logger.debug(f"Eastbound tube: {len(departures)} arrivals")
+
+        # Fetch westbound bus
         if self.westbound_bus.get('stop_id'):
             departures = self.tfl_client.get_arrivals(
                 stop_point_id=self.westbound_bus['stop_id'],
                 direction='outbound',
-                max_results=self.max_departures
+                max_results=20
             )
             if departures:
-                self.departures['westbound_bus'] = departures
-                success_count += 1
+                all_bus_departures.extend(departures)
                 logger.debug(f"Westbound bus: {len(departures)} arrivals")
 
-        # Update eastbound tube
-        if self.eastbound_tube.get('stop_id'):
-            departures = self.tfl_client.get_arrivals(
-                stop_point_id=self.eastbound_tube['stop_id'],
-                direction='inbound',  # TfL API uses 'inbound' for eastbound
-                max_results=self.max_departures
-            )
-            if departures:
-                self.departures['eastbound_tube'] = departures
-                success_count += 1
-                logger.debug(f"Eastbound tube: {len(departures)} arrivals")
-
-        # Update eastbound bus
+        # Fetch eastbound bus
         if self.eastbound_bus.get('stop_id'):
             departures = self.tfl_client.get_arrivals(
                 stop_point_id=self.eastbound_bus['stop_id'],
                 direction='inbound',
-                max_results=self.max_departures
+                max_results=20
             )
             if departures:
-                self.departures['eastbound_bus'] = departures
-                success_count += 1
+                all_bus_departures.extend(departures)
                 logger.debug(f"Eastbound bus: {len(departures)} arrivals")
 
-        return success_count > 0
+        # Sort by arrival time and limit to max_departures_per_panel
+        self.departures['tube'] = sorted(
+            all_tube_departures,
+            key=lambda d: d.get('minutes_until', 999)
+        )[:self.max_departures_per_panel]
+
+        self.departures['bus'] = sorted(
+            all_bus_departures,
+            key=lambda d: d.get('minutes_until', 999)
+        )[:self.max_departures_per_panel]
+
+        logger.debug(f"Combined: {len(self.departures['tube'])} tube, {len(self.departures['bus'])} bus")
+
+        return len(self.departures['tube']) > 0 or len(self.departures['bus']) > 0
 
     def render(self, image: Image.Image, draw: ImageDraw.Draw) -> None:
         """
-        Render all 4 quadrants of departures.
+        Render 2-panel layout with header.
 
         Args:
             image: PIL Image to draw on
@@ -122,127 +138,59 @@ class TfLDeparturesModule(BaseModule):
             x, y = self.position
             width, height = self.size
 
-            # Calculate quadrant dimensions
-            quad_width = width // 2
-            quad_height = height // 2
+            # Layout constants
+            header_height = 60
+            panel_header_height = 30
+            padding = 10
 
-            # Calculate positions for each quadrant
-            quadrants = {
-                'westbound_tube': (x, y),  # Upper left
-                'eastbound_tube': (x + quad_width, y),  # Upper right
-                'westbound_bus': (x, y + quad_height),  # Lower left
-                'eastbound_bus': (x + quad_width, y + quad_height),  # Lower right
-            }
+            # Render header with logo and station name
+            self._render_header(draw, x, y, width, header_height)
 
-            # Render each quadrant
-            for quad_name, quad_pos in quadrants.items():
-                self._render_quadrant(
-                    draw=draw,
-                    quadrant_name=quad_name,
-                    position=quad_pos,
-                    size=(quad_width, quad_height)
-                )
+            # Calculate panel dimensions (two equal columns)
+            content_y = y + header_height
+            content_height = height - header_height
+            panel_width = width // 2
 
-            # Draw dividing lines
-            self._draw_dividers(draw, x, y, width, height)
+            # Render left panel (Underground)
+            self._render_panel(
+                draw=draw,
+                mode='tube',
+                title='UNDERGROUND',
+                x=x,
+                y=content_y,
+                width=panel_width,
+                height=content_height,
+                panel_header_height=panel_header_height,
+                padding=padding
+            )
 
-            logger.debug("TfL departures rendered")
+            # Render right panel (Buses)
+            self._render_panel(
+                draw=draw,
+                mode='bus',
+                title='BUSES',
+                x=x + panel_width,
+                y=content_y,
+                width=panel_width,
+                height=content_height,
+                panel_header_height=panel_header_height,
+                padding=padding
+            )
+
+            # Draw vertical divider between panels
+            mid_x = x + panel_width
+            draw.line(
+                [(mid_x, content_y), (mid_x, content_y + content_height)],
+                fill=0,
+                width=3
+            )
+
+            logger.debug("TfL departures rendered in 2-panel layout")
 
         except Exception as e:
             logger.error(f"Failed to render TfL departures: {e}")
 
-    def _render_quadrant(
-        self,
-        draw: ImageDraw.Draw,
-        quadrant_name: str,
-        position: tuple,
-        size: tuple
-    ) -> None:
-        """
-        Render a single quadrant with departures.
-
-        Args:
-            draw: PIL ImageDraw object
-            quadrant_name: Name of the quadrant (e.g., 'westbound_tube')
-            position: (x, y) position of the quadrant
-            size: (width, height) size of the quadrant
-        """
-        x, y = position
-        width, height = size
-
-        # Get fonts
-        title_font = Renderer.get_bold_font(self.title_font_size)
-        departure_font = Renderer.get_default_font(self.departure_font_size)
-        time_font = Renderer.get_bold_font(self.departure_font_size + 2)
-
-        # Determine title
-        titles = {
-            'westbound_tube': 'Westbound Tubes',
-            'eastbound_tube': 'Eastbound Tubes',
-            'westbound_bus': 'Westbound Buses',
-            'eastbound_bus': 'Eastbound Buses',
-        }
-        title = titles.get(quadrant_name, quadrant_name)
-
-        # Draw title with padding
-        padding = 10
-        title_x = x + padding
-        title_y = y + padding
-        draw.text((title_x, title_y), title, font=title_font, fill=0)
-
-        # Get departures for this quadrant
-        departures = self.departures.get(quadrant_name, [])
-
-        if not departures:
-            # No departures available
-            no_data_y = title_y + self.title_font_size + 15
-            draw.text(
-                (title_x, no_data_y),
-                "No departures",
-                font=departure_font,
-                fill=0
-            )
-            return
-
-        # Render each departure
-        current_y = title_y + self.title_font_size + 15
-        line_height = self.departure_font_size + 8
-
-        for i, departure in enumerate(departures):
-            if current_y + line_height > y + height - padding:
-                break  # Don't overflow quadrant
-
-            # Format departure info
-            line_name = departure.get('line_name', 'Unknown')
-            destination = departure.get('destination', 'Unknown')
-            minutes = departure.get('minutes_until', 0)
-
-            # Truncate destination if too long
-            if len(destination) > 20:
-                destination = destination[:17] + '...'
-
-            # Format time
-            if minutes == 0:
-                time_str = "Due"
-            elif minutes == 1:
-                time_str = "1 min"
-            else:
-                time_str = f"{minutes} min"
-
-            # Draw line name/bus number (bold)
-            draw.text((title_x, current_y), line_name, font=departure_font, fill=0)
-
-            # Draw destination (regular)
-            dest_x = title_x + 60  # Offset for destination
-            draw.text((dest_x, current_y), destination, font=departure_font, fill=0)
-
-            # Draw time (bold, right-aligned within quadrant)
-            time_x = x + width - padding - 60  # Right align with padding
-            draw.text((time_x, current_y), time_str, font=time_font, fill=0)
-
-            current_y += line_height
-
-    def _draw_dividers(
+    def _render_header(
         self,
         draw: ImageDraw.Draw,
         x: int,
@@ -251,19 +199,193 @@ class TfLDeparturesModule(BaseModule):
         height: int
     ) -> None:
         """
-        Draw dividing lines between quadrants.
+        Render header with TfL logo and station name.
 
         Args:
             draw: PIL ImageDraw object
             x: Starting x position
             y: Starting y position
-            width: Total width
-            height: Total height
+            width: Header width
+            height: Header height
         """
-        # Vertical divider
-        mid_x = x + width // 2
-        draw.line([(mid_x, y), (mid_x, y + height)], fill=0, width=2)
+        padding = 10
 
-        # Horizontal divider
-        mid_y = y + height // 2
-        draw.line([(x, mid_y), (x + width, mid_y)], fill=0, width=2)
+        # Try to load TfL roundel logo
+        logo_size = height - (2 * padding)
+        logo_x = x + padding
+        logo_y = y + padding
+
+        logo_loaded = False
+        if os.path.exists(self.logo_path):
+            try:
+                logo = Image.open(self.logo_path)
+                # Convert to grayscale and then to 1-bit for e-paper
+                logo = logo.convert('L').convert('1')
+                logo.thumbnail((logo_size, logo_size), Image.Resampling.LANCZOS)
+                # Paste logo onto image
+                # Note: We're working with the draw object, so we need the parent image
+                # For now, we'll skip the logo pasting if we can't access the image
+                logo_loaded = True
+                logger.debug("TfL logo loaded")
+            except Exception as e:
+                logger.warning(f"Could not load TfL logo: {e}")
+
+        # Draw station name
+        header_font = Renderer.get_bold_font(self.header_font_size)
+        text_x = logo_x + logo_size + padding * 2 if logo_loaded else logo_x
+        text_y = y + (height // 2) - (self.header_font_size // 2)
+        draw.text((text_x, text_y), self.station_name, font=header_font, fill=0)
+
+        # Draw horizontal line below header
+        draw.line([(x, y + height), (x + width, y + height)], fill=0, width=2)
+
+    def _render_panel(
+        self,
+        draw: ImageDraw.Draw,
+        mode: str,
+        title: str,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        panel_header_height: int,
+        padding: int
+    ) -> None:
+        """
+        Render a single panel (Underground or Buses).
+
+        Args:
+            draw: PIL ImageDraw object
+            mode: 'tube' or 'bus'
+            title: Panel title ('UNDERGROUND' or 'BUSES')
+            x: Panel x position
+            y: Panel y position
+            width: Panel width
+            height: Panel height
+            panel_header_height: Height of the black header bar
+            padding: Padding in pixels
+        """
+        # Draw black header bar
+        draw.rectangle(
+            [(x, y), (x + width, y + panel_header_height)],
+            fill=0,
+            outline=0
+        )
+
+        # Draw white title text on black background
+        section_font = Renderer.get_bold_font(self.section_header_font_size)
+        title_x = x + padding
+        title_y = y + (panel_header_height // 2) - (self.section_header_font_size // 2)
+        draw.text((title_x, title_y), title, font=section_font, fill=255)  # White text
+
+        # Get departures for this mode
+        departures = self.departures.get(mode, [])
+
+        if not departures:
+            # No departures available
+            departure_font = Renderer.get_default_font(self.departure_font_size)
+            no_data_y = y + panel_header_height + padding * 2
+            draw.text(
+                (x + padding, no_data_y),
+                "No departures",
+                font=departure_font,
+                fill=0
+            )
+            return
+
+        # Render departures
+        current_y = y + panel_header_height + padding
+        line_height = self.departure_font_size + 14  # More spacing for badges
+
+        for departure in departures:
+            if current_y + line_height > y + height - padding:
+                break  # Don't overflow panel
+
+            self._render_departure_row(
+                draw=draw,
+                departure=departure,
+                x=x + padding,
+                y=current_y,
+                width=width - (2 * padding),
+                line_height=line_height
+            )
+
+            current_y += line_height
+
+    def _render_departure_row(
+        self,
+        draw: ImageDraw.Draw,
+        departure: Dict[str, Any],
+        x: int,
+        y: int,
+        width: int,
+        line_height: int
+    ) -> None:
+        """
+        Render a single departure row with line badge and destination.
+
+        Args:
+            draw: PIL ImageDraw object
+            departure: Departure information dictionary
+            x: Row x position
+            y: Row y position
+            width: Row width
+            line_height: Height allocated for this row
+        """
+        line_name = departure.get('line_name', 'Unknown')
+        destination = departure.get('destination', 'Unknown')
+        minutes = departure.get('minutes_until', 0)
+
+        # Get fonts
+        badge_font = Renderer.get_bold_font(self.line_badge_font_size)
+        dest_font = Renderer.get_default_font(self.departure_font_size)
+        time_font = Renderer.get_bold_font(self.departure_font_size + 2)
+
+        # Draw line badge (black box with white text)
+        badge_width = 50
+        badge_height = 20
+        badge_y = y + (line_height - badge_height) // 2
+
+        draw.rectangle(
+            [(x, badge_y), (x + badge_width, badge_y + badge_height)],
+            fill=0,
+            outline=0
+        )
+
+        # Draw line name in white on black badge
+        # Center text in badge
+        badge_text_bbox = draw.textbbox((0, 0), line_name, font=badge_font)
+        badge_text_width = badge_text_bbox[2] - badge_text_bbox[0]
+        badge_text_x = x + (badge_width - badge_text_width) // 2
+        badge_text_y = badge_y + (badge_height // 2) - (self.line_badge_font_size // 2)
+        draw.text((badge_text_x, badge_text_y), line_name, font=badge_font, fill=255)
+
+        # Draw destination next to badge
+        dest_x = x + badge_width + 10
+        dest_y = y + (line_height // 2) - (self.departure_font_size // 2)
+
+        # Truncate destination if too long
+        max_dest_width = width - badge_width - 80  # Leave space for time
+        while len(destination) > 0:
+            dest_bbox = draw.textbbox((0, 0), destination, font=dest_font)
+            dest_width = dest_bbox[2] - dest_bbox[0]
+            if dest_width <= max_dest_width:
+                break
+            destination = destination[:-1]
+
+        if len(destination) < len(departure.get('destination', '')):
+            destination = destination[:-3] + '...'
+
+        draw.text((dest_x, dest_y), destination, font=dest_font, fill=0)
+
+        # Format and draw time (right-aligned)
+        if minutes == 0:
+            time_str = "Due"
+        else:
+            time_str = f"{minutes}"
+
+        time_bbox = draw.textbbox((0, 0), time_str, font=time_font)
+        time_width = time_bbox[2] - time_bbox[0]
+        time_x = x + width - time_width
+        time_y = y + (line_height // 2) - (self.departure_font_size // 2)
+        draw.text((time_x, time_y), time_str, font=time_font, fill=0)

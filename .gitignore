@@ -30,7 +30,6 @@ MANIFEST
 config.json
 tfl-display.service
 /tmp/
-*.png
 waveshare_epd/
 .idea
 
