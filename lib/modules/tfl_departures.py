@@ -291,14 +291,26 @@ class TfLDeparturesModule(BaseModule):
             )
             return
 
+        # Calculate optimal row height to fill available space perfectly
+        available_height = height - panel_header_height
+        min_line_height = self.departure_font_size + 20  # Minimum height needed
+
+        # Calculate how many rows can fit with minimum height
+        max_rows = int(available_height / min_line_height)
+
+        # Limit to available departures
+        num_rows = min(max_rows, len(departures))
+
+        # Calculate line height to perfectly fill the space
+        if num_rows > 0:
+            line_height = available_height // num_rows
+        else:
+            line_height = min_line_height
+
         # Render departures
         current_y = y + panel_header_height
-        line_height = self.departure_font_size + 28  # Spacing for bigger fonts and borders
 
-        for idx, departure in enumerate(departures):
-            if current_y + line_height > y + height:
-                break  # Don't overflow panel
-
+        for idx, departure in enumerate(departures[:num_rows]):
             self._render_departure_row(
                 draw=draw,
                 departure=departure,
