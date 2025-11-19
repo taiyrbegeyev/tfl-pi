@@ -144,7 +144,7 @@ class TfLDeparturesModule(BaseModule):
             padding = 10
 
             # Render header with logo and station name
-            self._render_header(draw, x, y, width, header_height)
+            self._render_header(image, draw, x, y, width, header_height)
 
             # Calculate panel dimensions (two equal columns)
             content_y = y + header_height
@@ -192,6 +192,7 @@ class TfLDeparturesModule(BaseModule):
 
     def _render_header(
         self,
+        image: Image.Image,
         draw: ImageDraw.Draw,
         x: int,
         y: int,
@@ -202,6 +203,7 @@ class TfLDeparturesModule(BaseModule):
         Render header with TfL logo and station name.
 
         Args:
+            image: PIL Image to paste logo onto
             draw: PIL ImageDraw object
             x: Starting x position
             y: Starting y position
@@ -219,14 +221,16 @@ class TfLDeparturesModule(BaseModule):
         if os.path.exists(self.logo_path):
             try:
                 logo = Image.open(self.logo_path)
+                # Convert RGBA to handle transparency properly
+                if logo.mode == 'P' or logo.mode == 'PA':
+                    logo = logo.convert('RGBA')
                 # Convert to grayscale and then to 1-bit for e-paper
                 logo = logo.convert('L').convert('1')
                 logo.thumbnail((logo_size, logo_size), Image.Resampling.LANCZOS)
                 # Paste logo onto image
-                # Note: We're working with the draw object, so we need the parent image
-                # For now, we'll skip the logo pasting if we can't access the image
+                image.paste(logo, (logo_x, logo_y))
                 logo_loaded = True
-                logger.debug("TfL logo loaded")
+                logger.debug("TfL logo loaded and pasted")
             except Exception as e:
                 logger.warning(f"Could not load TfL logo: {e}")
 

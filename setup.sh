@@ -22,7 +22,7 @@ sudo apt-get update
 
 echo ""
 echo "Step 2: Installing system dependencies..."
-sudo apt-get install -y python3-pip python3-venv python3-pil python3-numpy
+sudo apt-get install -y python3-pip python3-venv python3-pil python3-numpy swig
 
 echo ""
 echo "Step 3: Creating virtual environment..."
