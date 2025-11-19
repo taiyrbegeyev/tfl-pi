@@ -39,9 +39,6 @@ class TfLDeparturesModule(BaseModule):
         self.eastbound_tube = config.get('eastbound_tube', {})
         self.eastbound_bus = config.get('eastbound_bus', {})
 
-        # Number of departures to show per panel (same for both)
-        self.max_departures_per_panel = config.get('max_departures', 8)
-
         # Font sizes
         self.header_font_size = config.get('header_font_size', 24)
         self.section_header_font_size = config.get('section_header_font_size', 16)
@@ -108,16 +105,20 @@ class TfLDeparturesModule(BaseModule):
                 all_bus_departures.extend(departures)
                 logger.debug(f"Eastbound bus: {len(departures)} arrivals")
 
-        # Sort by arrival time and limit to max_departures_per_panel
+        # Filter out departures arriving in less than 2 minutes
+        all_tube_departures = [d for d in all_tube_departures if d.get('minutes_until', 0) >= 2]
+        all_bus_departures = [d for d in all_bus_departures if d.get('minutes_until', 0) >= 2]
+
+        # Sort by arrival time (no limit - fit as many as possible)
         self.departures['tube'] = sorted(
             all_tube_departures,
             key=lambda d: d.get('minutes_until', 999)
-        )[:self.max_departures_per_panel]
+        )
 
         self.departures['bus'] = sorted(
             all_bus_departures,
             key=lambda d: d.get('minutes_until', 999)
-        )[:self.max_departures_per_panel]
+        )
 
         logger.debug(f"Combined: {len(self.departures['tube'])} tube, {len(self.departures['bus'])} bus")
 
@@ -291,10 +292,10 @@ class TfLDeparturesModule(BaseModule):
             return
 
         # Render departures
-        current_y = y + panel_header_height + padding
+        current_y = y + panel_header_height
         line_height = self.departure_font_size + 30  # More spacing for bigger fonts and borders
 
-        for departure in departures:
+        for idx, departure in enumerate(departures):
             if current_y + line_height > y + height - padding:
                 break  # Don't overflow panel
 
@@ -305,7 +306,8 @@ class TfLDeparturesModule(BaseModule):
                 y=current_y,
                 width=width,
                 line_height=line_height,
-                padding=padding
+                padding=padding,
+                is_first_row=(idx == 0)
             )
 
             current_y += line_height
@@ -318,7 +320,8 @@ class TfLDeparturesModule(BaseModule):
         y: int,
         width: int,
         line_height: int,
-        padding: int
+        padding: int,
+        is_first_row: bool = False
     ) -> None:
         """
         Render a single departure row with line badge and destination.
@@ -331,14 +334,18 @@ class TfLDeparturesModule(BaseModule):
             width: Row width
             line_height: Height allocated for this row
             padding: Padding for content inside the row
+            is_first_row: Whether this is the first row (skip top border)
         """
-        # Draw border around the entire row
-        draw.rectangle(
-            [(x, y), (x + width, y + line_height)],
-            outline=0,
-            fill=None,
-            width=2
-        )
+        # Draw borders (left, right, bottom, and top if not first row)
+        # Left border
+        draw.line([(x, y), (x, y + line_height)], fill=0, width=2)
+        # Right border
+        draw.line([(x + width, y), (x + width, y + line_height)], fill=0, width=2)
+        # Bottom border
+        draw.line([(x, y + line_height), (x + width, y + line_height)], fill=0, width=2)
+        # Top border (only if not first row - first row uses header as top border)
+        if not is_first_row:
+            draw.line([(x, y), (x + width, y)], fill=0, width=2)
 
         line_name = departure.get('line_name', 'Unknown')
         destination = departure.get('destination', 'Unknown')
