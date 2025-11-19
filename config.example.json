@@ -28,7 +28,7 @@
   },
   "modules": {
     "clock": {
-      "enabled": true,
+      "enabled": false,
       "position": [10, 10],
       "size": [200, 60],
       "time_format": "%H:%M",
