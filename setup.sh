@@ -23,7 +23,6 @@ sudo apt-get update
 echo ""
 echo "Step 2: Installing system dependencies..."
 sudo apt-get install -y python3-pip python3-venv python3-pil python3-numpy
-sudo apt-get install -y libopenjp2-7 libtiff5
 
 echo ""
 echo "Step 3: Creating virtual environment..."
@@ -44,9 +43,9 @@ echo ""
 echo "Step 5: Downloading Waveshare e-Paper driver..."
 if [ ! -d "waveshare_epd" ]; then
     echo "Cloning Waveshare e-Paper library..."
-    git clone https://github.com/waveshare/e-Paper.git /tmp/e-Paper
-    cp -r /tmp/e-Paper/RaspberryPi_JetsonNano/python/lib/waveshare_epd ./
-    rm -rf /tmp/e-Paper
+    git clone https://github.com/waveshare/e-Paper.git ./e-Paper-temp
+    cp -r ./e-Paper-temp/RaspberryPi_JetsonNano/python/lib/waveshare_epd ./
+    rm -rf ./e-Paper-temp
     echo "Driver installed successfully"
 else
     echo "Driver already exists, skipping..."
