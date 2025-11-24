@@ -2,10 +2,11 @@
 
 A Python project that displays real-time Transport for London (TfL) tube and bus departure information on an e-paper display, powered by a Raspberry Pi Zero 2W.
 
+![The photo of the project](https://github.com/user-attachments/assets/60cc8f9f-f30f-4c6e-b144-1b8ff3ac41a9)
+
 ## Overview
 
-This project transforms a Raspberry Pi Zero 2W and Waveshare 7.5-inch e-paper display into a beautiful, low-power departure board for London's public transport
-network. Perfect for keeping track of your local tube and bus times at a glance.
+This project transforms a Raspberry Pi Zero 2W and Waveshare 7.5-inch e-paper display into a low-power departure board for London's public transport network. Perfect for keeping track of local tube and bus times at a glance.
 
 ## Hardware Requirements
 
@@ -14,19 +15,17 @@ network. Perfect for keeping track of your local tube and bus times at a glance.
     - Resolution: 800×480 pixels
     - Interface: SPI
     - Display color: Black/White
-- microSD card (8GB or larger recommended)
-- Power supply for Raspberry Pi (5V/2.5A recommended)
+- microSD card
+- Power supply for Raspberry Pi
 
 ## Features
 
-- Real-time tube departure information (shows all departures including "Due")
+- Real-time tube departure information
 - Real-time bus departure information
-- Smart filtering: Filters out buses arriving in less than 2 minutes (gives you realistic time to reach the bus stop)
-- Automatically fits as many departures as possible on screen
 - Low power consumption thanks to e-paper display
 - Automatic refresh intervals
 - Clean, readable interface optimized for e-paper
-- Uses official TfL Unified API
+- Uses official TfL API
 
 ## Prerequisites
 
@@ -177,32 +176,6 @@ sudo journalctl -u tfl-display.service -f
 # View logs from today
 sudo journalctl -u tfl-display.service --since today
 ```
-
-### Configure Log Retention (Optional)
-
-To limit journal size, edit `/etc/systemd/journald.conf`:
-
-```bash
-sudo nano /etc/systemd/journald.conf
-```
-
-Add or modify these lines:
-
-```ini
-[Journal]
-SystemMaxUse=100M        # Limit journal size to 100MB
-MaxRetentionSec=7day     # Keep logs for 7 days
-```
-
-Then restart journald:
-
-```bash
-sudo systemctl restart systemd-journald
-```
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Helpful Resources
 
